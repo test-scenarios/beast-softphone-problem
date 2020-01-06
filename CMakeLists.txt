@@ -14,8 +14,9 @@ hunter_add_package(OpenSSL)
 
 find_package(Boost CONFIG COMPONENTS system)
 find_package(OpenSSL)
+find_package(Threads)
 
 file(GLOB_RECURSE src_files CONFIGURE_DEPENDS "src/*.cpp" "src/*.hpp")
 add_executable(check ${src_files})
 target_include_directories(check PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(check PRIVATE Boost::system OpenSSL::Crypto OpenSSL::SSL)
+target_link_libraries(check PRIVATE Boost::system OpenSSL::Crypto OpenSSL::SSL Threads::Threads)
