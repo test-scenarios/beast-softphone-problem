@@ -20,3 +20,7 @@ file(GLOB_RECURSE src_files CONFIGURE_DEPENDS "src/*.cpp" "src/*.hpp")
 add_executable(check ${src_files})
 target_include_directories(check PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(check PRIVATE Boost::system OpenSSL::Crypto OpenSSL::SSL Threads::Threads)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_compile_options(check PRIVATE -Werror -Wall -Wextra -pedantic)
+endif()

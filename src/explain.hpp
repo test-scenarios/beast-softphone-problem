@@ -11,65 +11,57 @@ namespace program {
     {
         std::exception_ptr ep_;
 
-        static void
-        emit(std::ostream &os, std::string const &message, std::size_t level)
+        static auto
+        prepare_buffer(std::size_t level)
+        -> std::string &
         {
-            static thread_local std::string padding;
-            padding.clear();
-            if (level) padding += '\n';
-            padding.append(level, ' ');
-            os << padding << message;
+            static thread_local std::string buffer;
+            buffer.clear();
+            if (level) buffer += '\n';
+            buffer.append(level, ' ');
+            return buffer;
+        }
+
+        template<class...Stuff>
+        static void
+        emit(std::ostream &os, std::size_t level, Stuff &&...stuff)
+        {
+            using expand = bool[];
+
+            void(expand{
+                 bool(os << prepare_buffer(level)),
+                 bool(os << stuff) ...}
+            );
         }
 
         static void
-        process(std::ostream &os, beast::system_error &e, std::size_t level = 0)
+        report(std::ostream &os, std::size_t level, beast::system_error const &e)
+        {
+            emit(os, level, "system error: ", e.code().category().name(), " : ", e.code().value(), " : ",
+                 e.code().message());
+        }
+
+        static void
+        report(std::ostream &os, std::size_t level, std::exception const &e)
+        {
+            emit(os, level, "exception: ", e.what());
+        }
+
+        template<class Exception>
+        static void
+        process(std::ostream &os, Exception &e, std::size_t level = 0)
         {
             using namespace std::literals;
 
-            emit(os, "exception: "s + e.code().category().name()
-                     + " : " + std::to_string(e.code().value())
-                     + " : " + e.what(), level);
+            report(os, level, e);
 
             try
             {
                 std::rethrow_if_nested(e);
             }
-            catch (beast::system_error &child)
-            {
-                process(os, child, level + 1);
-            }
-            catch (std::exception &child)
-            {
-                process(os, child, level + 1);
-            }
             catch (...)
             {
-                emit(os, "nonstandard exception", level + 1);
-            }
-        }
-
-        static void
-        process(std::ostream &os, std::exception &e, std::size_t level = 0)
-        {
-            using namespace std::literals;
-
-            emit(os, "exception: "s + e.what(), level);
-
-            try
-            {
-                std::rethrow_if_nested(e);
-            }
-            catch (beast::system_error &child)
-            {
-                process(os, child, level + 1);
-            }
-            catch (std::exception &child)
-            {
-                process(os, child, level + 1);
-            }
-            catch (...)
-            {
-                emit(os, "nonstandard exception", level + 1);
+                process(os, std::current_exception(), level + 1);
             }
         }
 
@@ -90,7 +82,7 @@ namespace program {
             }
             catch (...)
             {
-                emit(os, "nonstandard exception", level + 1);
+                emit(os, level + 1, "nonstandard exception");
             }
         }
 
